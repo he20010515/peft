@@ -37,6 +37,7 @@ from .tuners import (
     AdaLoraModel,
     AdaptionPromptModel,
     LoraModel,
+    PrototypeLoraModel,
     PrefixEncoder,
     PromptEmbedding,
     PromptEncoder,
@@ -61,6 +62,7 @@ from .utils import (
 
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
+    PeftType.PROTOTYPE_LORA: PrototypeLoraModel,
     PeftType.PROMPT_TUNING: PromptEmbedding,
     PeftType.P_TUNING: PromptEncoder,
     PeftType.PREFIX_TUNING: PrefixEncoder,
@@ -329,6 +331,14 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         print(
             f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
         )
+    def all_parameters(self):
+        all_param = []
+        for name,param in self.named_parameters():
+            num_params = param.numel()
+            if num_params == 0 and hasattr(param,"ds_numel"):
+                num_params = param.ds_numel
+            all_param.append((name,num_params,param.requires_grad))
+        return all_param
 
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
@@ -1012,7 +1022,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
                 decoder_inputs_embeds=decoder_inputs_embeds,
-                labels=labels,
+                # labels=labels,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
