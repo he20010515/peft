@@ -35,6 +35,8 @@ from .tuners import (
     LoraModel,
     PrototypeLoraConfig,
     PrototypeLoraModel,
+    GlobalMemLoraConfig,
+    GlobalMemLoraModel,
     AdaLoraConfig,
     AdaLoraModel,
     PrefixEncoder,

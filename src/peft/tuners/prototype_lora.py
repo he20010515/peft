@@ -96,7 +96,7 @@ class MaskedPrototype(nn.Module):
 @dataclass
 class PrototypeLoraConfig(LoraConfig):
     """
-    This is the configuration class to store the configuration of a [`LoraModel`].
+    This is the configuration class to store the configuration of a [`PrototypeLoraModel`].
 
     Args:
         r (`int`): Lora attention dimension.
@@ -349,3 +349,4 @@ class PrototypeLoraModel(nn.Module):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
+    pass

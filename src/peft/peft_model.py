@@ -38,6 +38,7 @@ from .tuners import (
     AdaptionPromptModel,
     LoraModel,
     PrototypeLoraModel,
+    GlobalMemLoraModel,
     PrefixEncoder,
     PromptEmbedding,
     PromptEncoder,
@@ -63,11 +64,12 @@ from .utils import (
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
     PeftType.PROTOTYPE_LORA: PrototypeLoraModel,
+    PeftType.DISCRETEKV_LORA: GlobalMemLoraModel,
     PeftType.PROMPT_TUNING: PromptEmbedding,
     PeftType.P_TUNING: PromptEncoder,
     PeftType.PREFIX_TUNING: PrefixEncoder,
-    PeftType.ADALORA: AdaLoraModel,
-    PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
+    # PeftType.ADALORA: AdaLoraModel,
+    # PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
 }
 
 
@@ -331,13 +333,14 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         print(
             f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
         )
+
     def all_parameters(self):
         all_param = []
-        for name,param in self.named_parameters():
+        for name, param in self.named_parameters():
             num_params = param.numel()
-            if num_params == 0 and hasattr(param,"ds_numel"):
+            if num_params == 0 and hasattr(param, "ds_numel"):
                 num_params = param.ds_numel
-            all_param.append((name,num_params,param.requires_grad))
+            all_param.append((name, num_params, param.requires_grad))
         return all_param
 
     def __getattr__(self, name: str):
@@ -836,17 +839,27 @@ class PeftModelForCausalLM(PeftModel):
                     return_dict=return_dict,
                     **kwargs,
                 )
-
-            return self.base_model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                inputs_embeds=inputs_embeds,
-                labels=labels,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-                **kwargs,
-            )
+            try:
+                return self.base_model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    inputs_embeds=inputs_embeds,
+                    labels=labels,
+                    output_attentions=output_attentions,
+                    output_hidden_states=output_hidden_states,
+                    return_dict=return_dict,
+                    **kwargs,
+                )
+            except:
+                return self.base_model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    inputs_embeds=inputs_embeds,
+                    output_attentions=output_attentions,
+                    output_hidden_states=output_hidden_states,
+                    return_dict=return_dict,
+                    **kwargs,
+                )
 
         batch_size = input_ids.shape[0]
         if attention_mask is not None:
